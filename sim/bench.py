@@ -369,23 +369,40 @@ def render(case: Case, main: Dict[str, object], after: Dict[str, "Durability"],
     w("## Per scenario")
     w("")
     header = "| Scenario | " + " | ".join(LAYOUT_LABEL[n] for n in LAYOUT_ORDER) + \
-             " | defrag95 vs shipped |"
+             " | shipped vs no defrag | defrag95 vs no defrag | defrag95 vs shipped |"
     w(header)
-    w("|" + "---|" * (len(LAYOUT_ORDER) + 2))
+    w("|" + "---|" * (len(LAYOUT_ORDER) + 4))
     for sc in SCENARIO_LABEL:
         cells = []
         for n in LAYOUT_ORDER:
             m, sd = measures[n].per_scenario[sc]
             cells.append("%.0f ms ±%.0f" % (m, sd))
-        gain = pct_faster(measures["defrag95"].per_scenario[sc][0],
-                          measures["win95_full"].per_scenario[sc][0])
-        w("| %s | %s | **%+.1f%%** |" % (SCENARIO_LABEL[sc], " | ".join(cells), gain))
+        raw = none.per_scenario[sc][0]
+        w("| %s | %s | %+.1f%% | %+.1f%% | **%+.1f%%** |" % (
+            SCENARIO_LABEL[sc], " | ".join(cells),
+            pct_faster(base.per_scenario[sc][0], raw),
+            pct_faster(new.per_scenario[sc][0], raw),
+            pct_faster(new.per_scenario[sc][0], base.per_scenario[sc][0])))
     cells = ["%.2f s ±%.2f" % (measures[n].day[0] / 1000, measures[n].day[1] / 1000)
              for n in LAYOUT_ORDER]
-    w("| **Weighted working day** | %s | **%+.1f%%** |" % (" | ".join(cells), day_gain))
+    w("| **Weighted working day** | %s | %+.1f%% | %+.1f%% | **%+.1f%%** |" % (
+        " | ".join(cells), pct_faster(base.day[0], none.day[0]),
+        pct_faster(new.day[0], none.day[0]), day_gain))
     w("")
     w("Mean ± population standard deviation over %d independent evaluation "
       "workloads, none of which the layout planner was allowed to see." % len(EVAL_SEEDS))
+    w("")
+    w("The two middle columns are the ones to read if the question is whether "
+      "defragmenting was worth doing at all. Over a whole working day the "
+      "shipped defragmenter is %.1f%% better than leaving the volume alone, "
+      "because its boot and launch wins are largely cancelled by the paging "
+      "storm, which it makes **%.1f%% worse**: it packs every file against the "
+      "front of the volume but cannot move the in-use swap file, so it drags "
+      "application code away from the %d-piece swap file it pages against. Run "
+      "from DOS, where the swap file can be moved, that regression disappears." % (
+        pct_faster(base.day[0], none.day[0]),
+        -pct_faster(base.per_scenario["paging"][0], none.per_scenario["paging"][0]),
+        len(case.aged.extents(case.aged.by_path["C:\\WINDOWS\\WIN386.SWP"]))))
     w("")
 
     w("## Where the boot time goes")

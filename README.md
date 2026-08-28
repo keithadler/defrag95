@@ -15,12 +15,19 @@ defrag95 lays the volume out by observed use. The measured result, against the
 defragmenter that actually shipped, on the same aged volume and a held-out
 workload:
 
-| | Windows 95 Defrag | defrag95 | |
-|---|---:|---:|---:|
-| Cold boot | 3,783 ms | **2,506 ms** | **34% less disk time** |
-| Launch Word | 2,053 ms | **1,555 ms** | 24% less |
-| Paging storm | 2,763 ms | **1,973 ms** | 29% less |
-| A modelled working day | 32.2 s | **24.3 s** | 25% less |
+| | No defrag | Windows 95 Defrag | defrag95 | defrag95 vs Win95 |
+|---|---:|---:|---:|---:|
+| Cold boot | 4,668 ms | 3,783 ms | **2,506 ms** | **34% less** |
+| Launch Word | 2,893 ms | 2,053 ms | **1,555 ms** | 24% less |
+| Paging storm | 2,289 ms | 2,763 ms | **1,973 ms** | 29% less |
+| A modelled working day | 32.9 s | 32.2 s | **24.3 s** | 25% less |
+
+The first column is the volume left alone, and it is worth looking at. Over a
+whole working day the defragmenter that shipped is **2% better than doing
+nothing** — its boot and launch wins are very nearly cancelled by the paging
+storm, which it makes 21% *worse*, because it packs every file against the
+front of the volume and cannot move the in-use swap file. Against that same
+untouched volume defrag95 is 46% faster to boot and 26% better over the day.
 
 Across every drive, fill level and assumption tested, the boot gain ranges
 from **14% to 42%**. The full table, with the sensitivity sweep and the
