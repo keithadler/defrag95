@@ -84,6 +84,7 @@ class Packer:
             self.cursor += 1
 
     def remaining(self) -> int:
+        """Clusters left between the cursor and the end of the volume."""
         return self.n - self.cursor
 
 
@@ -193,6 +194,7 @@ def _directory_walk_order(vol: Volume) -> List[int]:
 # --- baseline ----------------------------------------------------------------
 
 def layout_none(vol: Volume, log: Optional[AccessLog] = None) -> Volume:
+    """The aged volume, untouched. The baseline every policy is measured against."""
     return vol
 
 
@@ -274,6 +276,7 @@ def layout_win95_files_only(vol: Volume, log: Optional[AccessLog] = None) -> Vol
 
 @dataclass
 class Defrag95Options:
+    """Switches for the ablation: each one turns off a part of the policy."""
     use_access_order: bool = True     # place in observed first-touch order
     use_arenas: bool = True           # churn gets its own region
     use_gaps: bool = True             # growth headroom after volatile files

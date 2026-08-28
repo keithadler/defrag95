@@ -28,6 +28,7 @@ MB = 1024 * 1024
 
 @dataclass
 class Access:
+    """One read or write of a byte range in a file."""
     path: str
     offset: int
     length: int
@@ -36,6 +37,7 @@ class Access:
 
 @dataclass
 class Scenario:
+    """A named trace, and how often it happens in a working day."""
     name: str
     accesses: List[Access]
     per_day: float = 1.0        # how often this happens in a working day
@@ -94,6 +96,7 @@ def _jitter(seq: Sequence[str], pool: Sequence[str], rng: random.Random,
 
 def boot_scenario(vol: Volume, prof: Profiles, rng: random.Random,
                   jitter: float = 1.0) -> Scenario:
+    """Power-on to a usable desktop."""
     a: List[Access] = []
     # real mode: MBR, DOS kernel, config
     for p in ("C:\\IO.SYS", "C:\\MSDOS.SYS", "C:\\CONFIG.SYS", "C:\\AUTOEXEC.BAT"):
@@ -146,6 +149,7 @@ def boot_scenario(vol: Volume, prof: Profiles, rng: random.Random,
 
 def launch_scenario(vol: Volume, prof: Profiles, app: str, rng: random.Random,
                     jitter: float = 1.0) -> Scenario:
+    """A cold launch of one application from the shell."""
     p = prof.apps[app]
     a: List[Access] = []
     a += _load(vol, p.exe, rng, 0.35, 0.6)
@@ -162,6 +166,7 @@ def launch_scenario(vol: Volume, prof: Profiles, app: str, rng: random.Random,
 
 
 def document_scenario(vol: Volume, prof: Profiles, rng: random.Random) -> Scenario:
+    """Opening and saving eight documents."""
     a: List[Access] = []
     for doc in rng.sample(prof.docs, 8):
         a += _read_all(vol, doc)
@@ -171,6 +176,7 @@ def document_scenario(vol: Volume, prof: Profiles, rng: random.Random) -> Scenar
 
 
 def browse_scenario(vol: Volume, prof: Profiles, rng: random.Random) -> Scenario:
+    """A browsing session working against the disk cache."""
     a: List[Access] = []
     cache = prof.apps["netscape"].docs
     for f in rng.sample(cache, 40):
@@ -222,9 +228,11 @@ class AccessLog:
 
     @property
     def order(self) -> Dict[str, List[str]]:
+        """Per scenario, the paths the monitor saw, in mean first-touch order."""
         return {sc: sorted(r, key=lambda p: r[p]) for sc, r in self.rank.items()}
 
     def touched(self) -> set:
+        """Every path the monitor ever saw."""
         return set(self.counts)
 
 

@@ -20,6 +20,7 @@
 #define Uses_TKeys
 #define Uses_TMenuBar
 #define Uses_TMenuItem
+#define Uses_TPalette
 #define Uses_TRect
 #define Uses_TScreen
 #define Uses_TStaticText
@@ -73,6 +74,8 @@ static const TColorRGB kDim(0x8a, 0x93, 0xa6);
 static const TColorRGB kAccent(0x6c, 0xd8, 0xff);
 static const TColorRGB kGood(0x7a, 0xe5, 0x82);
 static const TColorRGB kBad(0xff, 0x8a, 0x3d);
+static const TColorRGB kBar(0x1c, 0x20, 0x2a);
+static const TColorRGB kRule(0x2a, 0x30, 0x3c);
 
 static TColorAttr ink(TColorRGB fg) { return TColorAttr(fg, kBack); }
 
@@ -98,6 +101,7 @@ private:
     std::vector<unsigned char> shown;    // what is on screen right now
     int mapRows = 0, mapCols = 0;
 
+    void drawTitle(int &y);
     void drawMap(int &y);
     void drawLegend(int &y);
     void drawStats(int &y);
@@ -165,24 +169,40 @@ void DefragView::draw() {
         return;
     }
     int y = 0;
+    drawTitle(y);
     drawMap(y);
     drawLegend(y);
     drawStats(y);
 }
 
+void DefragView::drawTitle(int &y) {
+    TDrawBuffer b;
+    b.moveChar(0, ' ', TColorAttr(kInk, kBar), size.x);
+    b.moveStr(1, TStringView(" defrag95 "), TColorAttr(kBack, kAccent));
+    std::string drive = "  " + data->drive;
+    b.moveStr(11, TStringView(drive.c_str(), (int)drive.size()),
+              TColorAttr(kDim, kBar));
+    const char *by = "Keith Adler ";
+    b.moveStr(std::max(0, (int)size.x - (int)std::strlen(by)),
+              TStringView(by), TColorAttr(kDim, kBar));
+    writeLine(0, y++, size.x, 1, b);
+    TDrawBuffer rule;
+    rule.moveChar(0, ' ', ink(kInk), size.x);
+    for (int x = 0; x < size.x; ++x)
+        rule.moveStr(x, TStringView("\xE2\x94\x80"), TColorAttr(kRule, kBack));
+    writeLine(0, y++, size.x, 1, rule);
+}
+
 void DefragView::drawMap(int &y) {
     const Layout &l = layout(current);
     char head[256];
-    double gain = 0;
-    const Layout *w95 = data->find("win95_full");
-    if (w95 && w95->bootMs > 0)
-        gain = (w95->bootMs - l.bootMs) / w95->bootMs * 100.0;
     std::snprintf(head, sizeof head, " %s   %ld clusters of %ld KB",
                   l.label.c_str(), data->clusters, data->clusterKb);
     line(y++, head, TColorAttr(kAccent, kBack));
 
     // rows below the map: legend, the boot-time table, and two summary lines
     int below = 3 + (int)data->layouts.size() + 1;
+    below += 2;                     // the title bar and its rule
     mapCols = std::max(8, (int)size.x - 2);
     mapRows = std::max(3, (int)size.y - below - 1);
     long cells = (long)mapRows * mapCols;
@@ -316,36 +336,20 @@ void DefragView::handleEvent(TEvent &event) {
 
 // --- window ------------------------------------------------------------------
 
-class DefragWindow : public TWindow {
-public:
-    DefragWindow(const TRect &bounds, MapData *data);
-    DefragView *view;
-};
-
-DefragWindow::DefragWindow(const TRect &bounds, MapData *data)
-    : TWindowInit(&DefragWindow::initFrame),
-      TWindow(bounds, "defrag95  -  Keith Adler", wnNoNumber) {
-    options |= ofTileable;
-    flags &= ~(wfClose);
-    TRect r = getExtent();
-    r.grow(-1, -1);
-    view = new DefragView(r, data);
-    insert(view);
-}
-
 // --- application --------------------------------------------------------------
 
 class Defrag95App : public TApplication {
 public:
     Defrag95App();
     static TMenuBar *initMenuBar(TRect r);
+    virtual TPalette &getPalette() const override;
     static TStatusLine *initStatusLine(TRect r);
     virtual void handleEvent(TEvent &event) override;
     virtual void idle() override;
 
 private:
     MapData data;
-    DefragWindow *win = nullptr;
+    DefragView *win = nullptr;
     int ticks = 0;
     void about();
 };
@@ -354,9 +358,40 @@ Defrag95App::Defrag95App()
     : TProgInit(&Defrag95App::initStatusLine, &Defrag95App::initMenuBar,
                 &Defrag95App::initDeskTop) {
     data = loadMap(gMapPath);
-    TRect r = deskTop->getExtent();
-    win = new DefragWindow(r, &data);
+    win = new DefragView(deskTop->getExtent(), &data);
     deskTop->insert(win);
+}
+
+TPalette &Defrag95App::getPalette() const {
+    // The stock palette is a grey menu bar over a blue desktop. Entries 1-7
+    // drive the menu and the status line, so restyle those to sit with the
+    // rest of the screen and leave everything else alone.
+    static char data[] = cpAppColor;
+    static bool patched = false;
+    if (!patched) {
+        patched = true;
+        data[0] = '\x08';   // desktop
+        data[1] = '\x07';   // menu and status text
+        data[2] = '\x08';   // disabled
+        data[3] = '\x0B';   // shortcut key
+        data[4] = '\x70';   // selected item
+        data[5] = '\x78';   // selected disabled
+        data[6] = '\x74';   // selected shortcut
+        // Dialogs live at palette indices 32-63. The stock set is the beige
+        // one from 1990; darken the frame, body and labels to match.
+        static const struct { int index; char attr; } dialog[] = {
+            {32, '\x08'},   // frame, passive -- also the dialog's own body
+            {33, '\x0F'},   // frame, active
+            {34, '\x0B'},   // frame icon
+            {35, '\x08'}, {36, '\x08'},          // scrollbars
+            {37, '\x07'},                        // static text
+            {38, '\x07'}, {39, '\x0F'}, {40, '\x0B'},   // labels
+        };
+        for (auto &d : dialog)
+            data[d.index - 1] = d.attr;
+    }
+    static TPalette palette(data, sizeof(data) - 1);
+    return palette;
 }
 
 TMenuBar *Defrag95App::initMenuBar(TRect r) {
@@ -413,7 +448,7 @@ void Defrag95App::about() {
 void Defrag95App::handleEvent(TEvent &event) {
     TApplication::handleEvent(event);
     if (event.what != evCommand) return;
-    DefragView *v = win ? win->view : nullptr;
+    DefragView *v = win;
     switch (event.message.command) {
         case cmAbout:
             about();
@@ -447,8 +482,8 @@ void Defrag95App::handleEvent(TEvent &event) {
 
 void Defrag95App::idle() {
     TApplication::idle();
-    if (win && win->view && win->view->animating() && ++ticks % 2 == 0)
-        win->view->step();
+    if (win && win->animating() && ++ticks % 2 == 0)
+        win->step();
 }
 
 int main(int argc, char **argv) {

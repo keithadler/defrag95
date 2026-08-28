@@ -76,6 +76,7 @@ SCENARIO_LABEL = {
 
 @dataclass
 class Case:
+    """One experiment: an aged volume, the monitor log, and the held-out workloads."""
     drive_key: str
     aged: Volume
     fresh_report: Dict[str, float]
@@ -92,6 +93,11 @@ def partition_sectors_for(drive: Drive) -> int:
 
 def make_case(drive_key: str = "1996", target_fill: float = 0.62, jitter: float = 1.0,
               monitor_days: int = MONITOR_DAYS, age_days: int = AGE_DAYS) -> Case:
+    """Build a volume, monitor it, then age it a year.
+
+    The evaluation workloads are drawn against the fresh volume and are
+    independent of the monitor log, which is what makes them held out.
+    """
     drive = Drive(DRIVES[drive_key])
     img = build_image(drive, seed=INSTALL_SEED,
                       partition_sectors=partition_sectors_for(drive),
@@ -107,6 +113,7 @@ def make_case(drive_key: str = "1996", target_fill: float = 0.62, jitter: float 
 
 def apply_layout(name: str, vol: Volume, log: AccessLog,
                  opts: Optional[Defrag95Options] = None, slack: int = 0) -> Volume:
+    """Run one layout policy over a volume and return the result."""
     if name == "defrag95":
         return layout_defrag95(vol, log, opts, slack=slack)
     if name in ("win95_full", "win95_full_offline"):
@@ -116,6 +123,7 @@ def apply_layout(name: str, vol: Volume, log: AccessLog,
 
 @dataclass
 class Measurement:
+    """Scenario timings and the boot breakdown, averaged over the eval draws."""
     per_scenario: Dict[str, Tuple[float, float]]     # name -> (mean ms, stdev)
     day: Tuple[float, float]
     boot_breakdown: Dict[str, float]
@@ -123,6 +131,7 @@ class Measurement:
 
 def measure(vol: Volume, evals: Sequence[Workload],
             cache_blocks: int = CACHE_BLOCKS) -> Measurement:
+    """Replay every evaluation workload and average the result."""
     samples: Dict[str, List[float]] = {}
     days: List[float] = []
     breakdown: Dict[str, float] = {}
@@ -144,12 +153,14 @@ def measure(vol: Volume, evals: Sequence[Workload],
 
 
 def pct_faster(new: float, old: float) -> float:
+    """How much less time `new` takes than `old`, as a percentage."""
     return (old - new) / old * 100.0 if old else 0.0
 
 
 # --- report sections ----------------------------------------------------------
 
 def run_main(case: Case) -> Dict[str, object]:
+    """Apply every layout to the same aged volume and measure each one."""
     out: Dict[str, object] = {}
     volumes: Dict[str, Volume] = {}
     measures: Dict[str, Measurement] = {}
@@ -168,6 +179,7 @@ def run_main(case: Case) -> Dict[str, object]:
 
 @dataclass
 class Durability:
+    """What became of a layout after further use, and what a re-run costs."""
     after: Measurement
     report: Dict[str, float]
     rerun: Measurement
@@ -207,6 +219,7 @@ ABLATIONS: List[Tuple[str, Defrag95Options]] = [
 
 
 def run_ablation(case: Case) -> List[Tuple[str, Measurement, Measurement]]:
+    """Measure the policy with each of its parts turned off in turn."""
     rows = []
     for label, opts in ABLATIONS:
         v = apply_layout("defrag95", case.aged, case.log, opts)
@@ -220,6 +233,7 @@ def run_ablation(case: Case) -> List[Tuple[str, Measurement, Measurement]]:
 
 @dataclass
 class SensitivityRow:
+    """One row of the sweep: one assumption changed, both layouts remeasured."""
     axis: str
     setting: str
     boot_win95: float
@@ -229,10 +243,12 @@ class SensitivityRow:
 
     @property
     def boot_gain(self) -> float:
+        """How much less boot time defrag95 takes in this configuration."""
         return pct_faster(self.boot_defrag95, self.boot_win95)
 
     @property
     def day_gain(self) -> float:
+        """How much less disk time defrag95 takes over a working day here."""
         return pct_faster(self.day_defrag95, self.day_win95)
 
 
@@ -266,6 +282,7 @@ FILL_STATS: Dict[float, Dict[str, float]] = {}
 
 
 def run_sensitivity(quick: bool = False) -> List[SensitivityRow]:
+    """Re-run the whole experiment with one assumption changed at a time."""
     rows: List[SensitivityRow] = []
 
     def add(axis: str, setting: str, pair: Tuple[Measurement, Measurement]) -> None:
@@ -301,6 +318,7 @@ def run_sensitivity(quick: bool = False) -> List[SensitivityRow]:
 def render(case: Case, main: Dict[str, object], after: Dict[str, "Durability"],
            ablation: List[Tuple[str, Measurement, Measurement]],
            sens: List[SensitivityRow], elapsed: float) -> str:
+    """Turn the measurements into the published report."""
     measures: Dict[str, Measurement] = main["measures"]      # type: ignore
     frag: Dict[str, Dict[str, float]] = main["fragmentation"]  # type: ignore
     defrag: Dict[str, Tuple[float, int]] = main["defrag"]     # type: ignore
@@ -547,6 +565,7 @@ CATEGORY = {
 
 
 def classify(vol: Volume, log: AccessLog) -> Dict[int, str]:
+    """Assign every file the category the cluster map colours it by."""
     boot = set(log.order.get("boot", []))
     appset = set()
     for sc, paths in log.order.items():
@@ -573,6 +592,7 @@ def classify(vol: Volume, log: AccessLog) -> Dict[int, str]:
 
 def export_map(case: Case, volumes: Dict[str, Volume], measures: Dict[str, Measurement],
                path: str, cells: int = 4096) -> None:
+    """Write the cluster map the Turbo Vision front end reads."""
     cats = classify(case.aged, case.log)
     payload = {
         "drive": case.aged.drive.spec.name,
@@ -620,6 +640,7 @@ def export_map(case: Case, volumes: Dict[str, Volume], measures: Dict[str, Measu
 
 
 def write_csv(path: str, rows: Sequence[Dict[str, object]], columns: Sequence[str]) -> None:
+    """Write one of the machine-readable result files."""
     with open(path, "w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(columns))
         writer.writeheader()
@@ -628,6 +649,7 @@ def write_csv(path: str, rows: Sequence[Dict[str, object]], columns: Sequence[st
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Run the experiment and write everything in results/."""
     ap = argparse.ArgumentParser(description="defrag95 benchmark")
     ap.add_argument("--quick", action="store_true", help="skip the slow sensitivity sweep")
     ap.add_argument("--out", default=RESULTS)

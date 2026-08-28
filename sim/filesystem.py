@@ -16,11 +16,13 @@ from .drive import SECTOR_BYTES, Drive
 
 
 class OutOfSpace(Exception):
+    """Raised when the volume cannot satisfy an allocation."""
     pass
 
 
 @dataclass
 class FileRec:
+    """What the volume knows about one file."""
     fid: int
     path: str
     kind: str
@@ -30,6 +32,7 @@ class FileRec:
 
     @property
     def directory(self) -> str:
+        """The containing directory, which is what the shipped defragmenter sorted by."""
         return self.path.rsplit("\\", 1)[0]
 
 
@@ -76,18 +79,23 @@ class Volume:
     # --- addressing ---------------------------------------------------------
 
     def lba_of(self, cluster: int) -> int:
+        """First sector of a cluster."""
         return self.data_start_lba + cluster * self.cluster_sectors
 
     def capacity_bytes(self) -> int:
+        """Total addressable bytes in the data area."""
         return self.cluster_count * self.cluster_bytes
 
     def used_bytes(self) -> int:
+        """Bytes committed to files, counting cluster slack."""
         return (self.cluster_count - self.free_count) * self.cluster_bytes
 
     def fill(self) -> float:
+        """Fraction of the volume in use, 0 to 1."""
         return 1.0 - self.free_count / self.cluster_count
 
     def clusters_for(self, size: int) -> int:
+        """Clusters a file of `size` bytes occupies. Never fewer than one."""
         return max(1, math.ceil(size / self.cluster_bytes))
 
     # --- allocation ---------------------------------------------------------
@@ -120,6 +128,7 @@ class Volume:
         return out
 
     def create(self, path: str, size: int, kind: str, growth_per_day: int = 0) -> FileRec:
+        """Create a file and allocate its clusters through the VFAT allocator."""
         if path in self.by_path:
             raise ValueError("exists: " + path)
         fid = self._next_fid
@@ -134,6 +143,12 @@ class Volume:
         return rec
 
     def append(self, path: str, extra_bytes: int) -> None:
+        """Grow a file.
+
+        The new clusters come from wherever the allocator happens to be
+        pointing, which is the mechanism that fragments a volume in the first
+        place.
+        """
         fid = self.by_path[path]
         rec = self.files[fid]
         old = len(self.chain[fid])
@@ -143,6 +158,7 @@ class Volume:
             self.chain[fid].extend(self._alloc(fid, need))
 
     def delete(self, path: str) -> None:
+        """Remove a file and return its clusters to the free pool."""
         fid = self.by_path.pop(path)
         for c in self.chain.pop(fid):
             self.owner[c] = None
@@ -162,6 +178,7 @@ class Volume:
         return runs
 
     def fragments(self, fid: int) -> int:
+        """How many separate physical pieces the file is in."""
         return len(self.extents(fid))
 
     def read_plan(self, path: str, offset: int, length: int) -> List[Tuple[int, int]]:
@@ -204,6 +221,7 @@ class Volume:
         return out
 
     def clusters_of_range(self, path: str, offset: int, length: int) -> List[int]:
+        """The clusters a byte range touches, in file order."""
         fid = self.by_path[path]
         chain = self.chain[fid]
         first = offset // self.cluster_bytes
@@ -214,6 +232,7 @@ class Volume:
     # --- whole-volume statistics -------------------------------------------
 
     def fragmentation_report(self) -> Dict[str, float]:
+        """The summary a defragmenter would show you before it ran."""
         total_files = len(self.files)
         frags = 0
         fragmented = 0
@@ -246,6 +265,7 @@ class Volume:
     # --- rebuilding under a layout policy ----------------------------------
 
     def clone_empty(self) -> "Volume":
+        """An empty volume with the same geometry and the same drive."""
         v = Volume.__new__(Volume)
         v.__dict__.update(
             {
@@ -273,6 +293,7 @@ class Volume:
         return v
 
     def copy(self) -> "Volume":
+        """A deep copy, so a layout can be aged without disturbing the original."""
         v = self.clone_empty()
         v.owner = list(self.owner)
         v.chain = {fid: list(ch) for fid, ch in self.chain.items()}

@@ -15,6 +15,7 @@ BLOCK_SECTORS = 8       # VCACHE tracks 4 KB blocks
 
 @dataclass
 class Result:
+    """What one scenario cost, and which of the three mechanics it went on."""
     scenario: str
     ms: float
     stats: ArmStats
@@ -75,6 +76,7 @@ _replay.missing = 0
 
 def run_workload(vol: Volume, workload: Sequence[Scenario],
                  cache_blocks: int = 768) -> Dict[str, Result]:
+    """Replay every scenario in the workload, each with its own cold cache."""
     return {sc.name: run_scenario(vol, sc, cache_blocks) for sc in workload}
 
 

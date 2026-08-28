@@ -1,7 +1,14 @@
 # defrag95
 
+[![CI](https://github.com/keithadler/defrag95/actions/workflows/ci.yml/badge.svg)](https://github.com/keithadler/defrag95/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#running-it)
+
 A defragmenter Windows 95 could have shipped, and a simulation that measures
 what it would have been worth.
+
+![The same volume, defragmented by use](docs/shot-defrag95.png)
 
 Windows 95's Disk Defragmenter made files contiguous and packed them against
 the front of the volume in directory order. That is a reasonable thing to do
@@ -102,25 +109,27 @@ machines, but with 24-bit colour, Unicode and a mouse. It shows the cluster
 map for each layout, animates a pass, and puts the boot-time comparison
 underneath.
 
-```
-  Disk  Layout  Help
-╔══════════════════════════ defrag95  -  Keith Adler ═══════════════════════════╗
-║ defrag95   48993 clusters of 32 KB                                            ║
-║ ██████████████████████████████████████████░███████████████████████████████████ ║
-║ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ ║
-║ ▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ ║
-║ 1.00 extents/file   0.0% of files fragmented   203 free-space holes            ║
-║ ░ free  █ boot set  █ app sets  █ swap file  █ warm  █ churn  ▓ cold  █ frag   ║
-║ Cold boot, disk time                              (held-out workload)         ║
-║   No defrag (aged volume)             4668 ms▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆  -23.4%   ║
-║   Win95 Defrag - files only           4635 ms▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆  -22.5%   ║
-║   Win95 Defrag - full (as shipped)    3783 ms▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆                ║
-║   Win95 Defrag - full, DOS mode       3788 ms▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆  -0.1%         ║
-║ > defrag95                            2506 ms▆▆▆▆▆▆▆▆▆▆▆  +33.8%              ║
-║   Launch Word 1555 ms    Paging storm 1973 ms    Working day 24.3 s           ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
- F1 About  Tab Layout  F9 Full pass  F10 Maintenance  Alt-X Exit
-```
+### The same volume, before and after
+
+A year-old volume, untouched. Pink is fragmented, grey is cold, and the boot
+set is the scattered blue — spread across the whole platter:
+
+![An aged, undefragmented volume](docs/shot-nodefrag.png)
+
+The same volume after defrag95: the boot set (blue) in read order on the outer
+cylinders, application sets (green) behind it, the paging file (yellow) in one
+piece next to them, churn (orange) fenced off in its own arena, and everything
+never touched (grey) exiled to the slow edge.
+
+![The same volume after defrag95](docs/shot-defrag95.png)
+
+A pass in progress — the reorganised region above, the mess still to be dealt
+with below:
+
+![A full pass, part-way through](docs/shot-pass.png)
+
+![About defrag95](docs/shot-about.png)
+
 
 ## Layout of the repository
 
@@ -136,6 +145,17 @@ underneath.
 | `ui/` | the Turbo Vision front end |
 | `docs/DESIGN.md` | how defrag95 would have been built in 1995 |
 | `docs/METHODOLOGY.md` | the model, its parameters, and where it is wrong |
+
+## Contributing
+
+The most useful contribution to a project like this is an attack on it: an
+assumption that flatters defrag95, an unfair comparison, a workload chosen for
+convenience. [CONTRIBUTING.md](CONTRIBUTING.md) sets out the ground rules —
+chiefly that any change moving the numbers has to report them before and after,
+and that the layout planner must never see the evaluation workload.
+
+MIT licensed. See [LICENSE](LICENSE), and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## What this is not
 

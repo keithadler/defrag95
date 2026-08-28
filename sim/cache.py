@@ -12,6 +12,7 @@ from collections import OrderedDict
 
 
 class ClusterCache:
+    """An LRU cache over 4 KB blocks, keyed by cluster and block index."""
     def __init__(self, capacity_clusters: int):
         self.capacity = max(0, capacity_clusters)
         self._lru: "OrderedDict[int, bool]" = OrderedDict()
@@ -34,6 +35,7 @@ class ClusterCache:
         return False
 
     def insert(self, cluster: int) -> None:
+        """Record a block as present without counting a hit or a miss."""
         if self.capacity == 0:
             return
         self._lru[cluster] = True
@@ -42,7 +44,9 @@ class ClusterCache:
             self._lru.popitem(last=False)
 
     def invalidate(self, cluster: int) -> None:
+        """Drop a block, as a write through another path would."""
         self._lru.pop(cluster, None)
 
     def clear(self) -> None:
+        """Empty the cache, as a reboot would."""
         self._lru.clear()

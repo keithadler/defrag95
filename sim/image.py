@@ -87,6 +87,7 @@ APP_EXES = {
 
 @dataclass
 class AppProfile:
+    """What one application touches when it starts, and how often it is started."""
     name: str
     exe: str
     exe_size: int
@@ -99,6 +100,7 @@ class AppProfile:
 
 @dataclass
 class Profiles:
+    """The parts of the install that traces and the layout planner refer to by name."""
     boot_core: List[str] = field(default_factory=list)
     driver_pool: List[str] = field(default_factory=list)
     font_pool: List[str] = field(default_factory=list)
@@ -116,6 +118,7 @@ class Profiles:
 
 @dataclass
 class Image:
+    """A built volume together with the profiles describing what is on it."""
     volume: Volume
     profiles: Profiles
     seed: int
@@ -142,6 +145,12 @@ def _bulk(vol: Volume, rng: random.Random, directory: str, prefix: str, ext: str
 
 def build_image(drive: Drive, seed: int = 1996, partition_sectors: Optional[int] = None,
                 target_fill: float = 0.62) -> Image:
+    """Generate a Windows 95 install on a fresh volume.
+
+    Files are created in the order setup would have written them, so the
+    fresh volume is perfectly ordered and perfectly unfragmented. Everything
+    interesting happens in `age()`.
+    """
     rng = random.Random(seed)
     vol = Volume(drive, partition_sectors=partition_sectors)
     prof = Profiles()

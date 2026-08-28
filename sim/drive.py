@@ -32,6 +32,7 @@ class Zone:
 
 @dataclass(frozen=True)
 class DriveSpec:
+    """One drive as a period spec sheet would describe it."""
     name: str
     year: int
     cylinders: int
@@ -82,25 +83,35 @@ class Drive:
     # --- geometry -----------------------------------------------------------
 
     def cylinder_of(self, lba: int) -> int:
+        """Which cylinder an LBA lives on."""
         return bisect_right(self._cum, lba) - 1
 
     def sectors_per_track(self, cyl: int) -> int:
+        """Sectors per track at this radius. Higher on the outer cylinders."""
         return self._spt[cyl]
 
     def cylinder_end_lba(self, cyl: int) -> int:
+        """First LBA of the next cylinder out."""
         return self._cum[cyl + 1]
 
     def capacity_bytes(self) -> int:
+        """Formatted capacity of the whole drive."""
         return self.total_sectors * SECTOR_BYTES
 
     # --- timing -------------------------------------------------------------
 
     def seek_ms(self, distance: int) -> float:
+        """Time to move the heads `distance` cylinders. Zero if they are already there."""
         if distance <= 0:
             return 0.0
         return max(0.0, self._a + self._b * math.sqrt(distance))
 
     def full_stroke_ms(self) -> float:
+        """Time to cross the entire platter.
+
+        A prediction of the calibrated curve rather than an input to it, which
+        is a small check on the curve being sane.
+        """
         return self.seek_ms(self.spec.cylinders - 1)
 
     def sector_ms(self, cyl: int) -> float:
@@ -109,11 +120,13 @@ class Drive:
         return 1000.0 / sectors_per_second
 
     def zone_rate_mb_s(self, cyl: int) -> float:
+        """Raw media rate at this radius, before head switches and driver overhead."""
         return (self._spt[cyl] * self.spec.rpm / 60.0) * SECTOR_BYTES / 1e6
 
 
 @dataclass
 class ArmStats:
+    """Where the time went, accumulated over a stream of requests."""
     requests: int = 0
     sectors: int = 0
     seek_ms: float = 0.0
@@ -124,6 +137,7 @@ class ArmStats:
 
     @property
     def total_ms(self) -> float:
+        """Everything the request stream cost."""
         return self.seek_ms + self.rotation_ms + self.transfer_ms + self.overhead_ms
 
 
@@ -138,6 +152,7 @@ class Arm:
         self.stats = ArmStats()
 
     def seek_to_park(self) -> None:
+        """Park the heads and forget the read-ahead buffer, as a cold start would."""
         self.cyl = 0
         self.next_lba = -1
         self.prefetch_end = -1
