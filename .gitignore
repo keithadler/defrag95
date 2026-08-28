@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+ui/defrag95
+ui/third_party/
+.DS_Store
