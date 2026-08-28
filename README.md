@@ -10,13 +10,20 @@ what it would have been worth.
 
 ![The same volume, defragmented by use](docs/shot-defrag95.png)
 
-> **This is a simulation.** No Windows 95 machine was involved, `DEFRAG.EXE`
-> was never run, and no real drive was measured. The Windows 95 policy is a
-> reconstruction of its documented behaviour, the drive parameters are
-> representative period figures rather than datasheet measurements, and the
-> workload traces are synthetic. What follows is a well-tested argument, not a
-> measurement — [docs/METHODOLOGY.md](docs/METHODOLOGY.md) is specific about
-> which assumptions carry the result.
+> **Most of this is a simulation — but not all of it any more.**
+> [`results/REAL-RESULTS.md`](results/REAL-RESULTS.md) is a trace-driven
+> benchmark against a **real FAT16 volume** on a **real FreeDOS machine**: real
+> files, real fragmentation from real DOS file operations, and real block
+> traces captured from the running guest. It measures **+9.8% to +15.8%** for
+> use-ordering and **+0.1%** for conventional defragmentation.
+>
+> The simulation in `sim/` predicted 34%. **It was roughly twice too
+> optimistic.** Its numbers are left unchanged below — they are what that model
+> says — but the real measurement is the one to trust. `DEFRAG.EXE` was still
+> never run (Windows 95 remains copyrighted; the period FreeDOS defragmenter
+> would not start on this volume), so the conventional baseline is an
+> implementation of directory-order packing, applied to the real volume and
+> verified to produce what such a tool produces.
 
 Windows 95's Disk Defragmenter made files contiguous and packed them against
 the front of the volume in directory order. That is a reasonable thing to do
@@ -151,8 +158,11 @@ with below:
 | `sim/engine.py` | replays a trace and charges it to the drive |
 | `sim/bench.py` | the experiment, the ablation, the sensitivity sweep |
 | `ui/` | the Turbo Vision front end |
+| `real/` | the real benchmark: FAT16 parser, trace mapper, replay |
 | `docs/DESIGN.md` | how defrag95 would have been built in 1995 |
 | `docs/METHODOLOGY.md` | the model, its parameters, and where it is wrong |
+| `docs/REAL-BENCHMARK.md` | how to rebuild the real machine and its traces |
+| `results/REAL-RESULTS.md` | what the real measurement says |
 
 ## Contributing
 
