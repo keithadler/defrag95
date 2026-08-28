@@ -2,6 +2,30 @@
 
 What is modelled, what the numbers rest on, and where the model is wrong.
 
+## First, what this is not
+
+Nothing in this repository ran on real hardware or under a real Windows 95.
+Specifically:
+
+* **`DEFRAG.EXE` was never executed.** `layout_win95_full` is a reconstruction
+  of the shipped defragmenter's documented behaviour — full defragmentation of
+  files and free space, packed in directory-walk order, unable to relocate the
+  in-use swap file. It is not a disassembly and it has not been validated
+  against the real thing. If that reconstruction is wrong, the baseline is
+  wrong, and the headline with it.
+* **No drive was measured.** The parameters below are representative figures
+  for consumer IDE drives of each year, written from general knowledge of the
+  era rather than transcribed from a datasheet.
+* **No boot trace was captured.** Which files a boot reads, and in what order,
+  is synthetic — it is a plausible reconstruction, not a recording.
+* **The install is generated**, not an inventory of a real disk.
+
+The result is therefore an argument about a mechanism, tested for internal
+consistency and for sensitivity to its own assumptions. It is not a
+measurement of Windows 95. The single most valuable contribution anyone could
+make to this project is a real disk trace from a period machine or a faithful
+emulator, against which the model could be calibrated or refuted.
+
 ## The drive
 
 Three costs are modelled separately, because a layout policy trades them

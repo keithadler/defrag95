@@ -10,6 +10,14 @@ what it would have been worth.
 
 ![The same volume, defragmented by use](docs/shot-defrag95.png)
 
+> **This is a simulation.** No Windows 95 machine was involved, `DEFRAG.EXE`
+> was never run, and no real drive was measured. The Windows 95 policy is a
+> reconstruction of its documented behaviour, the drive parameters are
+> representative period figures rather than datasheet measurements, and the
+> workload traces are synthetic. What follows is a well-tested argument, not a
+> measurement — [docs/METHODOLOGY.md](docs/METHODOLOGY.md) is specific about
+> which assumptions carry the result.
+
 Windows 95's Disk Defragmenter made files contiguous and packed them against
 the front of the volume in directory order. That is a reasonable thing to do
 if fragmentation is the problem. On a machine that boots the same 180-odd
@@ -18,7 +26,7 @@ problem: the boot set is still spread across a gigabyte of disk, because it
 was laid out in the order it happened to be *installed*, not the order it is
 *read*.
 
-defrag95 lays the volume out by observed use. The measured result, against the
+defrag95 lays the volume out by observed use. The result, against the
 defragmenter that actually shipped, on the same aged volume and a held-out
 workload:
 
